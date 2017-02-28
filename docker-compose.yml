@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  rgon-exec:
+    image: "emcniece/rgon-exec:dev"
+    tty: true
+    stdin_open: true
+  labels:
+    io.rancher.container.create_agent: 'true'
+    io.rancher.container.agent.role: 'environment'

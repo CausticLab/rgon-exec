@@ -1,0 +1,9 @@
+FROM alpine:edge
+MAINTAINER Eric McNiece <emcniece@gmail.com>
+
+RUN apk add --no-cache ca-certificates
+
+ADD build/rgon-exec-linux-amd64 /usr/local/bin/rgon-exec
+RUN chmod +x /usr/local/bin/rgon-exec
+
+ENTRYPOINT ["/usr/local/bin/rgon-exec"]
