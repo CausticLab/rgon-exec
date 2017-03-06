@@ -33,7 +33,7 @@ func main() {
   flag.Parse()
 
   if(version){
-    fmt.Println("rgon-exec version 1.1.0")
+    fmt.Println("rgon-exec version 1.1.1")
     return
   }
 
