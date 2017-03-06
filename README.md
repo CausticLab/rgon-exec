@@ -1,6 +1,6 @@
-#RGoN-Executor
+#RGoN-Exec
 
-A simple binary that executes a command on a container via Rancher API. Useful for quick access to container contents.
+A simple binary that executes a command on containers via Rancher API. Useful for quick access to container contents.
 
 ##Requirements
 
@@ -22,6 +22,8 @@ labels:
 
 ##Usage
 
+Commands can be run on single containers by using the `-name` or `-id` flags:
+
 ```sh
 ~ ./rgon-exec -name=my-container-name -cmd="echo test"
 Executing [echo test] on container [my-container-name]
@@ -30,9 +32,16 @@ websocket: close 1000 (normal)
 ~
 ```
 
+Alternatively, commands can be run on a group of containers by using the `-label` flag. The same command will be executed on every matched container.
+
 ###Flags
 
+Uses [pkg/flag](https://golang.org/pkg/flag/). Flags can be expressed as `-flag value`, `-flag=value`, or `-flag="value"`.
+
+- `-v`: Print version. Exits immediately after.
 - `-name=myContainer`: The name of a container, single string
+- `-id=93jf2039ads9a`: The ID of a container, starting at the beginning (no max length)
+- `-label=my-label-key`: The key of a label, like `io.rancher.stack.name`
 - `-cmd=""`: Command to send. Can be formatted like `-name` but should be wrapped in quotes if the command is multiple words.
 - `-debug`: **Optional** Prints debug information
 

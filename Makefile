@@ -8,7 +8,7 @@
 PROJECT := rgon-exec
 PLATFORM := linux
 ARCH := amd64
-DOCKER_IMAGE := emcniece/$(PROJECT)
+DOCKER_IMAGE := causticlab/$(PROJECT)
 
 VERSION := $(shell cat VERSION)
 GITSHA := $(shell git rev-parse --short HEAD)

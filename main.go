@@ -17,55 +17,107 @@ import (
 )
 
 var debugMode = false;
+var version = false;
+var containerID = "";
 var containerName = "";
+var containerLabel = "";
 var sendCommand = "";
 
 func main() {
+  flag.StringVar(&containerID, "id", "", "ID of container to run command on")
   flag.StringVar(&containerName, "name", "", "Name of container to run command on")
+  flag.StringVar(&containerLabel, "label", "", "Label of container group to run command on")
   flag.StringVar(&sendCommand, "cmd", "", "Command to send to container")
   flag.BoolVar(&debugMode, "debug", false, "Enable debug logging")
+  flag.BoolVar(&version, "v", false, "Print version")
   flag.Parse()
 
-  if(containerName == "") { printErr("Missing container name") }
-  if(sendCommand == "") { printErr("Missing command") }
+  if(version){
+    fmt.Println("rgon-exec version 1.1.0")
+    return
+  }
 
-  fmt.Printf("Executing [%s] on container [%s]\n", sendCommand, containerName)
-  debug("Finding container: " + containerName)
+  if isEmpty(sendCommand) { printErr("Missing command") }
+  if isEmpty(containerName) && isEmpty(containerID) && isEmpty(containerLabel){
+    printErr("Missing container specifier (ID, name, label)")
+  }
 
   // Find container, get execute URL
-  executeUrl, _ := getContainerExecUrl(containerName);
+  executeUrls := []string{}
 
-  // Send execute token generation request
-  websocketUrl, token, _ := getContainerWsData(executeUrl, sendCommand);
+  if !isEmpty(containerLabel) {
+    fmt.Printf("Executing [%s] on label [%s]\n", sendCommand, containerLabel)
 
-  // Run command on websocket
-  sendWsExecRequest(websocketUrl, token);
+    // Multiple containers
+    containerExecUrls, _ := getExecUrlsByLabel(containerLabel);
+    executeUrls = append(executeUrls, containerExecUrls...)
+  }
+
+  // Single containers
+  if !isEmpty(containerID) {
+    fmt.Printf("Executing [%s] on container [%s]\n", sendCommand, containerID)
+    container, _ := getContainerByID(containerID);
+    executeUrl, _ := getContainerExecUrl(container);
+    executeUrls = append(executeUrls, executeUrl)
+  }
+
+  if !isEmpty(containerName) {
+    fmt.Printf("Executing [%s] on container [%s]\n", sendCommand, containerName)
+    container, _ := getContainerByName(containerName);
+    executeUrl, _ := getContainerExecUrl(container);
+    executeUrls = append(executeUrls, executeUrl)
+  }
+
+  // Process all execute URLs
+  for _, url := range executeUrls{
+    // Send execute token generation request
+    websocketUrl, token, _ := getContainerWsData(url, sendCommand);
+
+    // Run command on websocket
+    sendWsExecRequest(websocketUrl, token);
+  }
 
 }
 
-func getContainerExecUrl(name string) (string, error){
-  url, key, secret := getCattleVars()
+func getExecUrlsByLabel(label string) ([]string, error){
+  endpoint := "containers?state=running"
+  fullData, _ := sendApiRequest(endpoint);
+  containers, _, _, _ := jsonparser.Get(fullData, "data")
+  urls := []string{}
 
-  // Get containers from API
-  endpoint := fmt.Sprintf("%s/containers?name=%s", url, containerName)
-  client := &http.Client{}
-  req, err := http.NewRequest("GET", endpoint, nil)
-  req.SetBasicAuth(key, secret)
-  resp, err := client.Do(req)
-  if err != nil{
-      log.Fatal(err)
-  }
-  defer resp.Body.Close()
-  bodyText, err := ioutil.ReadAll(resp.Body)
+  jsonparser.ArrayEach(containers, func(container []byte, dataType jsonparser.ValueType, offset int, err error) {
+      labels, _, _, _ := jsonparser.Get(container, "labels")
 
+      if(strings.Contains(string(labels), label)){
+        exec, _ := jsonparser.GetString(container, "actions", "execute")
+        urls = append(urls, exec)
+      }
+  })
+
+  return urls, nil
+}
+
+func getContainerByID(id string) ([]byte, error){
+  endpoint := fmt.Sprintf("containers?externalId_prefix=%s", id)
+  return sendApiRequest(endpoint)
+}
+
+func getContainerByName(name string) ([]byte, error){
+  endpoint := fmt.Sprintf("containers?name=%s", name)
+  return sendApiRequest(endpoint)
+}
+
+func getContainerExecUrl(bodyText []byte) (string, error){
   // Find passed container, get execute URL
   executeUrl, err := jsonparser.GetString(bodyText, "data", "[0]", "actions", "execute")
   if err != nil{
-      log.Fatal(err)
+    fmt.Println(err)
+    printErr("Couldn't parse container JSON")
+    //log.Fatal(err)
   }
   debug("Execute URL: "+ executeUrl)
 
-  return executeUrl, err;
+  return executeUrl, err
 }
 
 func getContainerWsData(executeUrl string, sendCommand string) (string, string, error){
@@ -141,14 +193,32 @@ func sendWsExecRequest(websocketUrl string, token string){
   }
 }
 
+func sendApiRequest(query string) ([]byte, error){
+  url, key, secret := getCattleVars()
+
+  // Build endpoint
+  endpoint := fmt.Sprintf("%s/%s", url, query)
+
+  // Get containers from API
+  client := &http.Client{}
+  req, err := http.NewRequest("GET", endpoint, nil)
+  req.SetBasicAuth(key, secret)
+  resp, err := client.Do(req)
+  if err != nil{
+      log.Fatal(err)
+  }
+  defer resp.Body.Close()
+  bodyText, err := ioutil.ReadAll(resp.Body)
+
+  return bodyText, err
+}
+
 func getCattleVars() (string, string, string){
 
   // All variables required=true!
   cattleUrl := getEnvOption("CATTLE_URL", true);
   cattleAccessKey := getEnvOption("CATTLE_ACCESS_KEY", true);
   cattleSecretKey := getEnvOption("CATTLE_SECRET_KEY", true);
-
-  debug(cattleUrl)
 
   return cattleUrl, cattleAccessKey, cattleSecretKey
 }
@@ -159,6 +229,10 @@ func getEnvOption(name string, required bool) string {
     log.Fatal("Required environment variable not set: ", name)
   }
   return strings.TrimSpace(val)
+}
+
+func isEmpty(str string) (bool){
+  return str == "";
 }
 
 func debug(message string) {
