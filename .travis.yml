@@ -5,13 +5,13 @@ install:
   - make deps
 script:
   - make test
-  - make build
+  - make ci-dist
 deploy:
   provider: releases
   skip_cleanup: true
   api_key:
     secure: ToOJm4CvG67rg5WPmhCdO8Yt8R3RJ1yHsQiiX7Kg6Ihhh4ofFs31vJzMocl7167ysVuQPnfYGL/81kMX5a/9jNfl/+ZJa8JqQXxJVFPLcdscP9n/R96ngT5yBXEGUaBSdhoIX01MHM71dtCrO2T49KpOXLDFfDys9uOS+TG+m9nXpeH3y0maZOinFzu6bgXIhvPnAPPy1WZR0eH1Hq8SBM/D//q0NDeZK5Rytgi0QScz2cOnAnj5sAwEax5fK1uUOyoTismG9S8k3BTR8son+s2oezNYfOu0Xe7Efv+02+UlrtdK2SXeGtAqB1xQ2sRBVfG9V3/71uPhm3CkIGrU71Xt7ID1p02IEJs0qKJjicyzSWTvBxZgehMkYhAenwRmKBgu78vKaxEvnCQ9/Y4/zdjnv9NS/TaEhgTy3JL/ZvVGES4hoA7Lp/KbHYkdS7pZES6kzUCze3OME7k56A5Tn2Tt/ZCoDMJL8oyVwmC9mnNFt9YrD2nxCkzP6aN9X9oc3zLc+feHW4Y0TP5OhwPm1DLStRVVTRRZl9VuvXn1Mt45NnNaxwvOPDdzzmIEHEJWPJA1zuJ2DO+EZVgO01YRPMSUFFuAW2j65Gk+ndnBNX1QGTuJGuW7q77uMQRI95B0lCt+eoSMyl/amwJEz9wMrJ2/rNjmTqAFN5RMM/TlL18=
-  file: build/rgon-exec-linux-amd64
+  file: dist/rgon-exec-*
   on:
     tags: true
     repo: CausticLab/rgon-exec
